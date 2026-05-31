@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-inter: "Inter", system-ui, sans-serif;
+  }
+
+  * {
+    @apply border-line;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-canvas text-ink;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  ::selection {
+    background: #111111;
+    color: #ffffff;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #e2e3e7;
+    border-radius: 9999px;
+    border: 3px solid #ffffff;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #cfd0d6;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-canvas shadow-subtle;
+  }
+
+  .field-label {
+    @apply text-[13px] font-medium text-ink;
+  }
+
+  .field-hint {
+    @apply text-[12.5px] text-muted;
+  }
+
+  .input-base {
+    @apply w-full rounded-xl border border-line bg-canvas px-3.5 py-2.5 text-[14px] text-ink
+      placeholder:text-muted/70 transition-all outline-none
+      focus:border-ink/30 focus:ring-4 focus:ring-ink/[0.04];
+  }
+
+  .focus-ring {
+    @apply outline-none focus-visible:ring-4 focus-visible:ring-ink/[0.06] focus-visible:border-ink/30;
+  }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #f1f2f4;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.6),
+    transparent
+  );
+  animation: shimmer 1.6s infinite;
+}
