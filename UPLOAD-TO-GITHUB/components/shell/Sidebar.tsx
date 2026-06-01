@@ -11,18 +11,28 @@ import {
   BookOpen,
   Settings,
   Sparkles,
+  NotebookPen,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useVault } from "@/lib/store";
 
-const NAV = [
+const EDITING_NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/tutorials", label: "Tutorials", icon: Library },
   { href: "/assets", label: "Assets", icon: FolderOpen },
   { href: "/categories", label: "Categories", icon: Tags },
   { href: "/favorites", label: "Favorites", icon: Star },
   { href: "/refiner", label: "AI Refiner", icon: Sparkles },
+  { href: "/export", label: "Book Export", icon: BookOpen },
+  { href: "/settings", label: "Settings", icon: Settings },
+];
+
+const ACADEMIC_NAV = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/notes", label: "Notes", icon: NotebookPen },
+  { href: "/favorites", label: "Favorites", icon: Star },
   { href: "/export", label: "Book Export", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -35,6 +45,8 @@ export function Sidebar({
   onToggle: () => void;
 }) {
   const pathname = usePathname();
+  const workspace = useVault((s) => s.workspace);
+  const nav = workspace === "academic" ? ACADEMIC_NAV : EDITING_NAV;
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
@@ -52,7 +64,7 @@ export function Sidebar({
           collapsed && "justify-center px-0"
         )}
       >
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-ink text-white">
+        <div className="ws-mark grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-ink text-white">
           <span className="text-[15px] font-bold tracking-tight">T</span>
         </div>
         {!collapsed && (
@@ -60,13 +72,15 @@ export function Sidebar({
             <span className="text-[14.5px] font-semibold tracking-tight text-ink">
               TUTORIAL
             </span>
-            <span className="mt-0.5 text-[11px] text-muted">Knowledge Vault</span>
+            <span className="mt-0.5 text-[11px] text-muted">
+              {workspace === "academic" ? "Study Notebook" : "Knowledge Vault"}
+            </span>
           </div>
         )}
       </div>
 
       <nav className="flex-1 space-y-0.5 px-3 py-2">
-        {NAV.map(({ href, label, icon: Icon, exact }) => {
+        {nav.map(({ href, label, icon: Icon, exact }) => {
           const active = isActive(href, exact);
           return (
             <Link
@@ -82,7 +96,7 @@ export function Sidebar({
               )}
             >
               {active && (
-                <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-ink" />
+                <span className="ws-accent-rail absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-ink" />
               )}
               <Icon size={18} strokeWidth={active ? 2.2 : 1.9} className="shrink-0" />
               {!collapsed && <span>{label}</span>}

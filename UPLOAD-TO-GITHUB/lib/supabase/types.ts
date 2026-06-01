@@ -8,6 +8,8 @@ import type {
   AssetType,
   Category,
   Difficulty,
+  Note,
+  NoteBlock,
   Profile,
   Tutorial,
   WorkflowStep,
@@ -61,6 +63,19 @@ export interface ProfileRow {
   author_name: string;
   book_title: string;
   theme: "light" | "dim";
+}
+
+export interface NoteRow {
+  id: string;
+  user_id: string;
+  serial: string;
+  title: string;
+  subject: string;
+  level: string;
+  blocks: NoteBlock[];
+  favorite: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // ---- mappers ----
@@ -129,4 +144,18 @@ export function rowToAsset(r: AssetRow, linkedTutorialIds: string[] = []): Asset
 
 export function rowToProfile(r: ProfileRow): Profile {
   return { authorName: r.author_name, bookTitle: r.book_title };
+}
+
+export function rowToNote(r: NoteRow): Note {
+  return {
+    id: r.id,
+    serial: r.serial,
+    title: r.title,
+    subject: r.subject ?? "",
+    level: r.level ?? "",
+    blocks: (r.blocks ?? []) as NoteBlock[],
+    favorite: r.favorite,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
 }

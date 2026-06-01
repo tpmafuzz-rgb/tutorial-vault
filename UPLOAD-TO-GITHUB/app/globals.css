@@ -68,6 +68,32 @@
   }
 }
 
+/* ---- Academic workspace: scholarly-blue accent ---- */
+/* Applied via data-workspace="academic" on the app shell. Stays white &
+   premium; only the accent (used for the active rail, the "T" mark, primary
+   academic touches) shifts to a deep academic blue so the two modes feel
+   distinct without leaving the minimal aesthetic. */
+[data-workspace="academic"] {
+  --accent-academic: #1d4ed8;
+  --accent-academic-soft: #eef2ff;
+}
+[data-workspace="academic"] .ws-mark {
+  background: var(--accent-academic) !important;
+}
+[data-workspace="academic"] .ws-accent-text {
+  color: var(--accent-academic) !important;
+}
+[data-workspace="academic"] .ws-accent-bg {
+  background: var(--accent-academic) !important;
+  color: #ffffff !important;
+}
+[data-workspace="academic"] .ws-accent-rail {
+  background: var(--accent-academic) !important;
+}
+[data-workspace="academic"] .ws-tint {
+  background: var(--accent-academic-soft) !important;
+}
+
 .skeleton {
   position: relative;
   overflow: hidden;

@@ -68,3 +68,35 @@ export interface Profile {
   authorName: string;
   bookTitle: string;
 }
+
+/** Which side of the app is active. */
+export type Workspace = "editing" | "academic";
+
+/**
+ * One labeled section of an academic note. The user writes freely, then tags
+ * the block ("Introduction", "Key Terms", ...). Labels power the auto TOC.
+ */
+export interface NoteBlock {
+  id: string;
+  label: string;
+  content: string;
+}
+
+/**
+ * An academic note — a blank canvas organized into labeled blocks, the
+ * counterpart to the rigid editing Tutorial template.
+ */
+export interface Note {
+  id: string;
+  /** auto-generated: NOTE-0001 */
+  serial: string;
+  title: string;
+  /** free-text subject, e.g. "Biology" */
+  subject: string;
+  /** free-text level, e.g. "Class 11" (optional) */
+  level: string;
+  blocks: NoteBlock[];
+  favorite: boolean;
+  createdAt: string;
+  updatedAt: string;
+}

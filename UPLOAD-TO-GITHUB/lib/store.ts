@@ -6,18 +6,23 @@ import type {
   AssetType,
   Category,
   Difficulty,
+  Note,
+  NoteBlock,
   Profile,
   Tutorial,
+  Workspace,
   WorkflowStep,
 } from "./types";
 import { createClient } from "./supabase/client";
 import {
   rowToAsset,
   rowToCategory,
+  rowToNote,
   rowToProfile,
   rowToTutorial,
   type AssetRow,
   type CategoryRow,
+  type NoteRow,
   type ProfileRow,
   type TutorialRow,
 } from "./supabase/types";
@@ -39,6 +44,13 @@ export interface NewTutorialInput {
   finalChecklist: string[];
   workflow: WorkflowStep[];
   linkedAssetIds: string[];
+}
+
+export interface NewNoteInput {
+  title: string;
+  subject: string;
+  level: string;
+  blocks: NoteBlock[];
 }
 
 /** camelCase domain → snake_case columns for tutorials. */
@@ -75,9 +87,14 @@ interface VaultState {
   error: string | null;
   userId: string | null;
 
+  /** which side of the app is active */
+  workspace: Workspace;
+  setWorkspace: (w: Workspace) => void;
+
   tutorials: Tutorial[];
   categories: Category[];
   assets: Asset[];
+  notes: Note[];
   profile: Profile;
   theme: "light" | "dim";
   pdfExports: number;
@@ -88,6 +105,12 @@ interface VaultState {
   updateTutorial: (id: string, patch: NewTutorialInput) => Promise<void>;
   deleteTutorial: (id: string) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
+
+  // ---- academic notes ----
+  addNote: (input: NewNoteInput) => Promise<string | null>;
+  updateNote: (id: string, patch: NewNoteInput) => Promise<void>;
+  deleteNote: (id: string) => Promise<void>;
+  toggleNoteFavorite: (id: string) => Promise<void>;
 
   addCategory: (name: string, color: string) => Promise<void>;
   renameCategory: (id: string, name: string) => Promise<void>;
@@ -129,15 +152,35 @@ async function syncLinks(
   }
 }
 
+function noteToRow(input: Partial<NewNoteInput>) {
+  const row: Record<string, unknown> = {};
+  if (input.title !== undefined) row.title = input.title;
+  if (input.subject !== undefined) row.subject = input.subject;
+  if (input.level !== undefined) row.level = input.level;
+  if (input.blocks !== undefined) row.blocks = input.blocks;
+  return row;
+}
+
 export const useVault = create<VaultState>()((set, get) => ({
   loaded: false,
   loading: false,
   error: null,
   userId: null,
 
+  workspace: "editing",
+  setWorkspace: (w) => {
+    set({ workspace: w });
+    try {
+      localStorage.setItem("tv-workspace", w);
+    } catch {
+      /* ignore */
+    }
+  },
+
   tutorials: [],
   categories: [],
   assets: [],
+  notes: [],
   profile: emptyProfile,
   theme: "light",
   pdfExports: 0,
@@ -160,6 +203,7 @@ export const useVault = create<VaultState>()((set, get) => ({
       { data: catRows },
       { data: assetRows },
       { data: linkRows },
+      { data: noteRows },
       { data: profileRow },
       { count: exportCount },
     ] = await Promise.all([
@@ -167,6 +211,7 @@ export const useVault = create<VaultState>()((set, get) => ({
       supabase.from("categories").select("*").order("created_at"),
       supabase.from("assets").select("*").order("created_at", { ascending: false }),
       supabase.from("tutorial_assets").select("tutorial_id, asset_id"),
+      supabase.from("notes").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("*").eq("id", user.id).single(),
       supabase.from("export_logs").select("*", { count: "exact", head: true }),
     ]);
@@ -181,8 +226,17 @@ export const useVault = create<VaultState>()((set, get) => ({
 
     const prof = profileRow as ProfileRow | null;
 
+    let savedWorkspace: Workspace = get().workspace;
+    try {
+      const w = localStorage.getItem("tv-workspace");
+      if (w === "editing" || w === "academic") savedWorkspace = w;
+    } catch {
+      /* ignore */
+    }
+
     set({
       userId: user.id,
+      workspace: savedWorkspace,
       tutorials: ((tutRows ?? []) as TutorialRow[]).map((r) =>
         rowToTutorial(r, linksByTutorial.get(r.id) ?? [])
       ),
@@ -190,6 +244,7 @@ export const useVault = create<VaultState>()((set, get) => ({
       assets: ((assetRows ?? []) as AssetRow[]).map((r) =>
         rowToAsset(r, linksByAsset.get(r.id) ?? [])
       ),
+      notes: ((noteRows ?? []) as NoteRow[]).map(rowToNote),
       profile: prof ? rowToProfile(prof) : emptyProfile,
       theme: prof?.theme ?? "light",
       pdfExports: exportCount ?? 0,
@@ -293,6 +348,69 @@ export const useVault = create<VaultState>()((set, get) => ({
       set((s) => ({
         tutorials: s.tutorials.map((t) =>
           t.id === id ? { ...t, favorite: current.favorite } : t
+        ),
+      }));
+    }
+  },
+
+  // ---- academic notes ----
+  addNote: async (input) => {
+    const supabase = createClient();
+    const userId = get().userId;
+    if (!userId) return null;
+    const { data, error } = await supabase
+      .from("notes")
+      .insert({ ...noteToRow(input), user_id: userId })
+      .select("*")
+      .single();
+    if (error || !data) {
+      set({ error: error?.message ?? "Failed to create note." });
+      return null;
+    }
+    const note = rowToNote(data as NoteRow);
+    set((s) => ({ notes: [note, ...s.notes] }));
+    return note.id;
+  },
+
+  updateNote: async (id, patch) => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("notes")
+      .update(noteToRow(patch))
+      .eq("id", id)
+      .select("*")
+      .single();
+    if (error || !data) {
+      set({ error: error?.message ?? "Failed to save note." });
+      return;
+    }
+    const note = rowToNote(data as NoteRow);
+    set((s) => ({ notes: s.notes.map((n) => (n.id === id ? note : n)) }));
+  },
+
+  deleteNote: async (id) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("notes").delete().eq("id", id);
+    if (error) return set({ error: error.message });
+    set((s) => ({ notes: s.notes.filter((n) => n.id !== id) }));
+  },
+
+  toggleNoteFavorite: async (id) => {
+    const current = get().notes.find((n) => n.id === id);
+    if (!current) return;
+    const next = !current.favorite;
+    set((s) => ({
+      notes: s.notes.map((n) => (n.id === id ? { ...n, favorite: next } : n)),
+    }));
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("notes")
+      .update({ favorite: next })
+      .eq("id", id);
+    if (error) {
+      set((s) => ({
+        notes: s.notes.map((n) =>
+          n.id === id ? { ...n, favorite: current.favorite } : n
         ),
       }));
     }
@@ -448,4 +566,43 @@ export function searchTutorials(
       .toLowerCase();
     return haystack.includes(query);
   });
+}
+
+/** Client-side search over academic notes. */
+export function searchNotes(notes: Note[], q: string): Note[] {
+  const query = q.trim().toLowerCase();
+  if (!query) return notes;
+  return notes.filter((n) => {
+    const haystack = [
+      n.title,
+      n.serial,
+      n.subject,
+      n.level,
+      n.blocks.map((b) => `${b.label} ${b.content}`).join(" "),
+    ]
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(query);
+  });
+}
+
+/** Distinct section labels the user has used before, most-recent first. */
+export function noteLabelSuggestions(notes: Note[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const n of notes) {
+    for (const b of n.blocks) {
+      const l = b.label.trim();
+      if (l && !seen.has(l.toLowerCase())) {
+        seen.add(l.toLowerCase());
+        out.push(l);
+      }
+    }
+  }
+  // a few sensible defaults if the user is brand new
+  const defaults = ["Introduction", "Key Terms", "Explanation", "Example", "Summary"];
+  for (const d of defaults) {
+    if (!seen.has(d.toLowerCase())) out.push(d);
+  }
+  return out.slice(0, 12);
 }

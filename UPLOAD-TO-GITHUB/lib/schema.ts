@@ -25,3 +25,24 @@ export const tutorialFormSchema = z.object({
 });
 
 export type TutorialFormValues = z.infer<typeof tutorialFormSchema>;
+
+export const noteBlockSchema = z.object({
+  id: z.string(),
+  label: z.string().default(""),
+  content: z.string().default(""),
+});
+
+export const noteFormSchema = z.object({
+  title: z.string().min(2, "Give your note a title."),
+  subject: z.string().default(""),
+  level: z.string().default(""),
+  blocks: z
+    .array(noteBlockSchema)
+    .min(1, "Add at least one section.")
+    .refine(
+      (blocks) => blocks.some((b) => b.content.trim().length > 0),
+      "Write something in at least one section."
+    ),
+});
+
+export type NoteFormValues = z.infer<typeof noteFormSchema>;

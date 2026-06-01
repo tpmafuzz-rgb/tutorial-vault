@@ -3,8 +3,15 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Search, CornerDownLeft, FileText } from "lucide-react";
-import { useVault, searchTutorials } from "@/lib/store";
+import { useVault, searchTutorials, searchNotes } from "@/lib/store";
 import { Modal } from "@/components/ui/Modal";
+
+interface Hit {
+  id: string;
+  name: string;
+  meta: string;
+  href: string;
+}
 
 export function GlobalSearch({
   open,
@@ -14,14 +21,35 @@ export function GlobalSearch({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const { tutorials, categories, assets } = useVault();
+  const { workspace, tutorials, categories, assets, notes } = useVault();
+  const isAcademic = workspace === "academic";
   const [q, setQ] = React.useState("");
   const [active, setActive] = React.useState(0);
 
-  const results = React.useMemo(
-    () => searchTutorials(tutorials, categories, assets, q).slice(0, 7),
-    [tutorials, categories, assets, q]
-  );
+  const catName = (id: string | null) =>
+    categories.find((c) => c.id === id)?.name ?? "Uncategorized";
+
+  const results: Hit[] = React.useMemo(() => {
+    if (isAcademic) {
+      return searchNotes(notes, q)
+        .slice(0, 7)
+        .map((n) => ({
+          id: n.id,
+          name: n.title,
+          meta: `${n.serial}${n.subject ? " · " + n.subject : ""}`,
+          href: `/notes/${n.id}`,
+        }));
+    }
+    return searchTutorials(tutorials, categories, assets, q)
+      .slice(0, 7)
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        meta: `${t.serial} · ${catName(t.categoryId)}`,
+        href: `/tutorials/${t.id}`,
+      }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAcademic, tutorials, categories, assets, notes, q]);
 
   React.useEffect(() => {
     if (open) {
@@ -32,9 +60,9 @@ export function GlobalSearch({
 
   React.useEffect(() => setActive(0), [q]);
 
-  const go = (id: string) => {
+  const go = (href: string) => {
     onClose();
-    router.push(`/tutorials/${id}`);
+    router.push(href);
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -45,12 +73,9 @@ export function GlobalSearch({
       e.preventDefault();
       setActive((a) => Math.max(a - 1, 0));
     } else if (e.key === "Enter" && results[active]) {
-      go(results[active].id);
+      go(results[active].href);
     }
   };
-
-  const catName = (id: string | null) =>
-    categories.find((c) => c.id === id)?.name ?? "Uncategorized";
 
   return (
     <Modal open={open} onClose={onClose} className="max-w-xl p-0 overflow-hidden">
@@ -61,7 +86,11 @@ export function GlobalSearch({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Search tutorials, categories, assets…"
+          placeholder={
+            isAcademic
+              ? "Search notes by title, subject, content…"
+              : "Search tutorials, categories, assets…"
+          }
           className="h-14 w-full bg-transparent text-[15px] text-ink outline-none placeholder:text-muted/70"
         />
       </div>
@@ -69,14 +98,18 @@ export function GlobalSearch({
       <div className="max-h-[340px] overflow-y-auto p-2">
         {results.length === 0 ? (
           <div className="px-3 py-10 text-center text-[13.5px] text-muted">
-            {q ? "No matches found." : "Start typing to search your vault."}
+            {q
+              ? "No matches found."
+              : isAcademic
+                ? "Start typing to search your notes."
+                : "Start typing to search your vault."}
           </div>
         ) : (
-          results.map((t, i) => (
+          results.map((r, i) => (
             <button
-              key={t.id}
+              key={r.id}
               onMouseEnter={() => setActive(i)}
-              onClick={() => go(t.id)}
+              onClick={() => go(r.href)}
               className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
                 i === active ? "bg-surface" : ""
               }`}
@@ -86,11 +119,9 @@ export function GlobalSearch({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[13.5px] font-medium text-ink">
-                  {t.name}
+                  {r.name}
                 </div>
-                <div className="truncate text-[12px] text-muted">
-                  {t.serial} · {catName(t.categoryId)}
-                </div>
+                <div className="truncate text-[12px] text-muted">{r.meta}</div>
               </div>
               {i === active && (
                 <CornerDownLeft size={14} className="shrink-0 text-muted" />

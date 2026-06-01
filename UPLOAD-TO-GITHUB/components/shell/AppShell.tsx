@@ -6,12 +6,14 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { GlobalSearch } from "./GlobalSearch";
 import { useHydrated } from "@/lib/useHydrated";
+import { useVault } from "@/lib/store";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = React.useState(false);
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [mobileNav, setMobileNav] = React.useState(false);
   const pathname = usePathname();
+  const workspace = useVault((s) => s.workspace);
   // Kick off the one-time Supabase load so the whole app (incl. global search) has data.
   useHydrated();
 
@@ -42,7 +44,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="flex min-h-screen w-full bg-canvas">
+    <div
+      data-workspace={workspace}
+      className="flex min-h-screen w-full bg-canvas"
+    >
       {/* Desktop sidebar */}
       <div className="hidden md:block">
         <Sidebar collapsed={collapsed} onToggle={toggle} />
