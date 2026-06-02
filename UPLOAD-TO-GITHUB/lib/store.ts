@@ -129,9 +129,17 @@ interface VaultState {
   setProfile: (patch: Partial<Profile>) => Promise<void>;
   setTheme: (theme: "light" | "dim") => Promise<void>;
   logExport: (bookTitle: string, count: number) => Promise<void>;
+
+  // ---- onboarding ----
+  completeOnboarding: () => Promise<void>;
+  restartOnboarding: () => void;
 }
 
-const emptyProfile: Profile = { authorName: "", bookTitle: "My Editing Encyclopedia" };
+const emptyProfile: Profile = {
+  authorName: "",
+  bookTitle: "My Editing Encyclopedia",
+  onboarded: false,
+};
 
 /** Sync tutorial<->asset links into a child table by diffing. */
 async function syncLinks(
@@ -511,9 +519,36 @@ export const useVault = create<VaultState>()((set, get) => ({
     const row: Record<string, unknown> = {};
     if (patch.authorName !== undefined) row.author_name = patch.authorName;
     if (patch.bookTitle !== undefined) row.book_title = patch.bookTitle;
+    if (patch.onboarded !== undefined) row.onboarded = patch.onboarded;
     const { error } = await supabase.from("profiles").update(row).eq("id", userId);
     if (error) return set({ error: error.message });
     set((s) => ({ profile: { ...s.profile, ...patch } }));
+  },
+
+  completeOnboarding: async () => {
+    // optimistic local update + fast localStorage flag so it never flickers back
+    try {
+      localStorage.setItem("tv-onboarded", "1");
+    } catch {
+      /* ignore */
+    }
+    set((s) => ({ profile: { ...s.profile, onboarded: true } }));
+    const supabase = createClient();
+    const userId = get().userId;
+    if (userId) {
+      await supabase.from("profiles").update({ onboarded: true }).eq("id", userId);
+    }
+  },
+
+  restartOnboarding: () => {
+    try {
+      localStorage.removeItem("tv-onboarded");
+    } catch {
+      /* ignore */
+    }
+    set((s) => ({ profile: { ...s.profile, onboarded: false } }));
+    // note: we intentionally do NOT flip the DB flag here — replay is a local
+    // session action. It re-persists as completed when finished/skipped again.
   },
 
   setTheme: async (theme) => {

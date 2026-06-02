@@ -7,6 +7,7 @@ import { Topbar } from "./Topbar";
 import { GlobalSearch } from "./GlobalSearch";
 import { useHydrated } from "@/lib/useHydrated";
 import { useVault } from "@/lib/store";
+import { Onboarding } from "@/components/onboarding/Onboarding";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = React.useState(false);
@@ -77,6 +78,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <Onboarding />
     </div>
   );
 }

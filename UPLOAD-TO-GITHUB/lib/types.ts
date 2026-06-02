@@ -67,6 +67,7 @@ export interface Tutorial {
 export interface Profile {
   authorName: string;
   bookTitle: string;
+  onboarded: boolean;
 }
 
 /** Which side of the app is active. */

@@ -28,6 +28,7 @@ export function Topbar({
       </button>
 
       <button
+        data-tour="search"
         onClick={onOpenSearch}
         className="group flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-line bg-surface/60 px-3.5 text-muted transition-colors hover:border-ink/20 hover:bg-surface"
       >
@@ -45,7 +46,7 @@ export function Topbar({
         <WorkspaceToggle />
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2" data-tour="new-button">
         <Link href={isAcademic ? "/notes/new" : "/tutorials/new"}>
           <Button size="md" className={isAcademic ? "ws-accent-bg" : undefined}>
             <Plus size={16} strokeWidth={2.4} />

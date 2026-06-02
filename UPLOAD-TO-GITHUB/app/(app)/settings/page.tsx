@@ -9,6 +9,8 @@ import {
   Download,
   Check,
   LogOut,
+  GraduationCap,
+  Play,
 } from "lucide-react";
 import { useVault } from "@/lib/store";
 import { useHydrated } from "@/lib/useHydrated";
@@ -53,7 +55,7 @@ export default function SettingsPage() {
   const hydrated = useHydrated();
   const router = useRouter();
   const store = useVault();
-  const { profile, theme, setProfile, setTheme } = store;
+  const { profile, theme, setProfile, setTheme, restartOnboarding } = store;
 
   const [name, setName] = React.useState(profile.authorName);
   const [book, setBook] = React.useState(profile.bookTitle);
@@ -174,6 +176,20 @@ export default function SettingsPage() {
               {store.categories.length} categories saved to your account.
             </p>
           )}
+        </Card>
+
+        <Card
+          icon={<GraduationCap size={16} />}
+          title="Help & Tour"
+          description="New here, or want a refresher?"
+        >
+          <Button variant="secondary" onClick={() => restartOnboarding()}>
+            <Play size={15} />
+            View Tutorial Again
+          </Button>
+          <p className="mt-3 text-[12px] text-muted">
+            Replays the welcome walkthrough and interactive product tour.
+          </p>
         </Card>
 
         <Card

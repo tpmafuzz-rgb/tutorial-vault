@@ -79,7 +79,7 @@ export function Sidebar({
         )}
       </div>
 
-      <nav className="flex-1 space-y-0.5 px-3 py-2">
+      <nav className="flex-1 space-y-0.5 px-3 py-2" data-tour="sidebar">
         {nav.map(({ href, label, icon: Icon, exact }) => {
           const active = isActive(href, exact);
           return (
@@ -87,6 +87,7 @@ export function Sidebar({
               key={href}
               href={href}
               title={collapsed ? label : undefined}
+              data-tour={href === "/export" ? "export" : undefined}
               className={cn(
                 "group relative flex items-center gap-3 rounded-xl px-3 py-2 text-[13.5px] font-medium transition-all",
                 collapsed && "justify-center px-0",

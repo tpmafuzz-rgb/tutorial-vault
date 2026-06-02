@@ -63,6 +63,7 @@ export interface ProfileRow {
   author_name: string;
   book_title: string;
   theme: "light" | "dim";
+  onboarded: boolean;
 }
 
 export interface NoteRow {
@@ -143,7 +144,11 @@ export function rowToAsset(r: AssetRow, linkedTutorialIds: string[] = []): Asset
 }
 
 export function rowToProfile(r: ProfileRow): Profile {
-  return { authorName: r.author_name, bookTitle: r.book_title };
+  return {
+    authorName: r.author_name,
+    bookTitle: r.book_title,
+    onboarded: r.onboarded ?? false,
+  };
 }
 
 export function rowToNote(r: NoteRow): Note {

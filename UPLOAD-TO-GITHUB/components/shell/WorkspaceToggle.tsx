@@ -33,7 +33,10 @@ export function WorkspaceToggle() {
   };
 
   return (
-    <div className="flex items-center rounded-full border border-line bg-surface/70 p-0.5 shadow-subtle">
+    <div
+      data-tour="workspace-toggle"
+      className="flex items-center rounded-full border border-line bg-surface/70 p-0.5 shadow-subtle"
+    >
       <button
         onClick={() => go("editing")}
         className={cn(
