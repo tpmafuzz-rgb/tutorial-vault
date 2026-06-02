@@ -9,11 +9,15 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import type { Note } from "@/lib/types";
+import { PDF_FONT, registerPdfFonts } from "@/lib/pdfFonts";
 
 /**
  * Academic "Study Notebook" PDF. Cover -> Table of Contents -> one chapter per
  * note (its labeled sections) -> page-numbered footer. Scholarly-blue accent.
  */
+
+// Bengali-capable Unicode font so Bangla notes render correctly (not as mojibake).
+registerPdfFonts();
 
 const ink = "#111111";
 const muted = "#666666";
@@ -27,7 +31,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 64,
     fontSize: 11,
     color: ink,
-    fontFamily: "Helvetica",
+    fontFamily: PDF_FONT,
     lineHeight: 1.5,
   },
   cover: { flex: 1, justifyContent: "center", paddingHorizontal: 64 },
@@ -38,10 +42,10 @@ const s = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 16,
   },
-  coverTitle: { fontSize: 34, fontFamily: "Helvetica-Bold", lineHeight: 1.15, marginBottom: 24 },
+  coverTitle: { fontSize: 34, fontFamily: PDF_FONT, fontWeight: "bold", lineHeight: 1.15, marginBottom: 24 },
   coverRule: { height: 2, backgroundColor: blue, width: 60, marginBottom: 24 },
   coverMeta: { fontSize: 12, color: muted, marginBottom: 4 },
-  h1: { fontSize: 20, fontFamily: "Helvetica-Bold", marginBottom: 20 },
+  h1: { fontSize: 20, fontFamily: PDF_FONT, fontWeight: "bold", marginBottom: 20 },
   tocRow: { flexDirection: "row", alignItems: "flex-end", marginBottom: 10 },
   tocSerial: { fontSize: 10, color: muted, width: 64 },
   tocName: { fontSize: 12, color: ink },
@@ -55,12 +59,12 @@ const s = StyleSheet.create({
   },
   tocPage: { fontSize: 11, color: muted },
   chSerial: { fontSize: 9, color: blue, letterSpacing: 1.5, marginBottom: 4 },
-  chTitle: { fontSize: 22, fontFamily: "Helvetica-Bold", marginBottom: 6 },
+  chTitle: { fontSize: 22, fontFamily: PDF_FONT, fontWeight: "bold", marginBottom: 6 },
   chMeta: { fontSize: 11, color: muted, marginBottom: 14 },
   chAccent: { height: 2, backgroundColor: blue, width: 40, marginBottom: 16 },
   sectionLabel: {
     fontSize: 12,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: PDF_FONT, fontWeight: "bold",
     color: blue,
     marginTop: 14,
     marginBottom: 5,
@@ -102,7 +106,7 @@ function PdfBody({ source }: { source: string }) {
     if (!t) continue;
     if (t.startsWith("## ")) {
       out.push(
-        <Text key={key++} style={[s.body, { fontFamily: "Helvetica-Bold" }]}>
+        <Text key={key++} style={[s.body, { fontFamily: PDF_FONT, fontWeight: "bold" }]}>
           {t.slice(3)}
         </Text>
       );

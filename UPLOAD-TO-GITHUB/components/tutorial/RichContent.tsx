@@ -54,7 +54,11 @@ export function RichContent({ source }: { source: string }) {
 
   const lines = source.split("\n");
   const blocks: React.ReactNode[] = [];
-  let list: { ordered: boolean; items: string[] } | null = null;
+  // ordered items carry the number the author actually typed, so a list that
+  // is broken up by other lines (e.g. "1. term" then a definition, then
+  // "2. term") keeps 1, 2, 3 instead of every item resetting to 1.
+  let list: { ordered: boolean; items: { num: number | null; text: string }[] } | null =
+    null;
   let key = 0;
 
   const flush = () => {
@@ -66,9 +70,9 @@ export function RichContent({ source }: { source: string }) {
           {items.map((it, i) => (
             <li key={i} className="flex gap-2.5 text-[14px] leading-relaxed text-ink/90">
               <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md bg-surface text-[11px] font-semibold text-muted">
-                {i + 1}
+                {it.num ?? i + 1}
               </span>
-              <span>{renderInline(it, `o${key}-${i}`)}</span>
+              <span>{renderInline(it.text, `o${key}-${i}`)}</span>
             </li>
           ))}
         </ol>
@@ -79,7 +83,7 @@ export function RichContent({ source }: { source: string }) {
           {items.map((it, i) => (
             <li key={i} className="flex gap-2.5 text-[14px] leading-relaxed text-ink/90">
               <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-ink/40" />
-              <span>{renderInline(it, `u${key}-${i}`)}</span>
+              <span>{renderInline(it.text, `u${key}-${i}`)}</span>
             </li>
           ))}
         </ul>
@@ -109,13 +113,14 @@ export function RichContent({ source }: { source: string }) {
         flush();
         list = { ordered: false, items: [] };
       }
-      list.items.push(line.replace(/^[-*•]\s+/, ""));
-    } else if (/^\d+\.\s+/.test(line)) {
+      list.items.push({ num: null, text: line.replace(/^[-*•]\s+/, "") });
+    } else if (/^(\d+)\.\s+/.test(line)) {
+      const m = line.match(/^(\d+)\.\s+/)!;
       if (!list || !list.ordered) {
         flush();
         list = { ordered: true, items: [] };
       }
-      list.items.push(line.replace(/^\d+\.\s+/, ""));
+      list.items.push({ num: parseInt(m[1], 10), text: line.slice(m[0].length) });
     } else {
       flush();
       blocks.push(

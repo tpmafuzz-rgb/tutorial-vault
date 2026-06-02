@@ -9,12 +9,15 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import type { Tutorial } from "@/lib/types";
+import { PDF_FONT, registerPdfFonts } from "@/lib/pdfFonts";
 
 /**
  * The "published handbook" PDF. Cover → Table of Contents → Chapters → footer
- * with page numbers. Uses the built-in Helvetica so it renders reliably with
- * zero font registration / network dependency.
+ * with page numbers. Uses Noto Sans Bengali (bundled in /public/fonts) so
+ * Bangla and other non-Latin text render correctly instead of as mojibake.
  */
+
+registerPdfFonts();
 
 const ink = "#111111";
 const muted = "#666666";
@@ -27,7 +30,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 64,
     fontSize: 11,
     color: ink,
-    fontFamily: "Helvetica",
+    fontFamily: PDF_FONT,
     lineHeight: 1.5,
   },
   // cover
@@ -45,14 +48,14 @@ const s = StyleSheet.create({
   },
   coverTitle: {
     fontSize: 34,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: PDF_FONT, fontWeight: "bold",
     lineHeight: 1.15,
     marginBottom: 24,
   },
   coverRule: { height: 1, backgroundColor: ink, width: 60, marginBottom: 24 },
   coverMeta: { fontSize: 12, color: muted, marginBottom: 4 },
   // toc
-  h1: { fontSize: 20, fontFamily: "Helvetica-Bold", marginBottom: 20 },
+  h1: { fontSize: 20, fontFamily: PDF_FONT, fontWeight: "bold", marginBottom: 20 },
   tocRow: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -71,12 +74,12 @@ const s = StyleSheet.create({
   tocPage: { fontSize: 11, color: muted },
   // chapter
   chSerial: { fontSize: 9, color: muted, letterSpacing: 1.5, marginBottom: 4 },
-  chTitle: { fontSize: 22, fontFamily: "Helvetica-Bold", marginBottom: 8 },
+  chTitle: { fontSize: 22, fontFamily: PDF_FONT, fontWeight: "bold", marginBottom: 8 },
   chAccent: { height: 2, backgroundColor: ink, width: 40, marginBottom: 16 },
   goal: { fontSize: 12, color: muted, marginBottom: 18 },
   sectionLabel: {
     fontSize: 10,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: PDF_FONT, fontWeight: "bold",
     letterSpacing: 1,
     textTransform: "uppercase",
     color: muted,
