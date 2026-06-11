@@ -14,6 +14,10 @@ import {
   NotebookPen,
   GraduationCap,
   Layers,
+  Target,
+  Flame,
+  CalendarCheck,
+  BookMarked,
 } from "lucide-react";
 import { useVault } from "@/lib/store";
 import { useHydrated } from "@/lib/useHydrated";
@@ -21,6 +25,13 @@ import { StatCard } from "@/components/ui/StatCard";
 import { TutorialCard } from "@/components/tutorial/TutorialCard";
 import { NoteCard } from "@/components/note/NoteCard";
 import { Button } from "@/components/ui/Button";
+import { ProgressGrid } from "@/components/ielts/ProgressGrid";
+import {
+  collectVocabulary,
+  completedCount,
+  currentStreak,
+  IELTS_TOTAL_DAYS,
+} from "@/lib/ielts";
 
 const EDITING_ACTIONS = [
   { href: "/tutorials/new", label: "New Tutorial", icon: Plus },
@@ -36,6 +47,11 @@ const ACADEMIC_ACTIONS = [
   { href: "/export", label: "Export Book", icon: BookOpen },
 ];
 
+const IELTS_ACTIONS = [
+  { href: "/ielts", label: "My Challenges", icon: Target },
+  { href: "/export", label: "Export Tracker", icon: BookOpen },
+];
+
 export default function DashboardPage() {
   const hydrated = useHydrated();
   const {
@@ -44,12 +60,25 @@ export default function DashboardPage() {
     assets,
     categories,
     notes,
+    ieltsChallenges,
+    ieltsDays,
     pdfExports,
     profile,
   } = useVault();
 
   const isAcademic = workspace === "academic";
-  const actions = isAcademic ? ACADEMIC_ACTIONS : EDITING_ACTIONS;
+  const isIelts = workspace === "ielts";
+  const actions = isIelts
+    ? IELTS_ACTIONS
+    : isAcademic
+      ? ACADEMIC_ACTIONS
+      : EDITING_ACTIONS;
+
+  const activeChallenge =
+    ieltsChallenges.find((c) => c.status === "active") ?? null;
+  const activeDays = activeChallenge
+    ? ieltsDays.filter((d) => d.challengeId === activeChallenge.id)
+    : [];
 
   const recentTutorials = [...tutorials]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
@@ -67,13 +96,48 @@ export default function DashboardPage() {
           Welcome back{hydrated ? `, ${profile.authorName.split(" ")[0]}` : ""}
         </p>
         <h1 className="mt-0.5 text-[27px] font-semibold tracking-tighter text-ink">
-          {isAcademic ? "Your study notebook" : "Your editing encyclopedia"}
+          {isIelts
+            ? "Your IELTS comeback"
+            : isAcademic
+              ? "Your study notebook"
+              : "Your editing encyclopedia"}
         </h1>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {isAcademic ? (
+        {isIelts ? (
+          <>
+            <StatCard
+              label="Days Complete"
+              value={
+                hydrated
+                  ? `${completedCount(activeDays)}/${IELTS_TOTAL_DAYS}`
+                  : "—"
+              }
+              icon={<CalendarCheck size={16} />}
+              hint="active challenge"
+            />
+            <StatCard
+              label="Current Streak"
+              value={hydrated ? currentStreak(activeDays) : "—"}
+              icon={<Flame size={16} />}
+              hint="consecutive days"
+            />
+            <StatCard
+              label="Vocabulary Bank"
+              value={hydrated ? collectVocabulary(activeDays).length : "—"}
+              icon={<BookMarked size={16} />}
+              hint="words collected"
+            />
+            <StatCard
+              label="Challenges"
+              value={hydrated ? ieltsChallenges.length : "—"}
+              icon={<Target size={16} />}
+              hint="attempts started"
+            />
+          </>
+        ) : isAcademic ? (
           <>
             <StatCard
               label="Total Notes"
@@ -155,9 +219,13 @@ export default function DashboardPage() {
       <div className="mt-9">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-[16px] font-semibold tracking-tight text-ink">
-            {isAcademic ? "Recent Notes" : "Recent Tutorials"}
+            {isIelts
+              ? "Active Challenge"
+              : isAcademic
+                ? "Recent Notes"
+                : "Recent Tutorials"}
           </h2>
-          <Link href={isAcademic ? "/notes" : "/tutorials"}>
+          <Link href={isIelts ? "/ielts" : isAcademic ? "/notes" : "/tutorials"}>
             <Button variant="ghost" size="sm">
               View all
               <ArrowRight size={14} />
@@ -171,6 +239,42 @@ export default function DashboardPage() {
               <div key={i} className="skeleton h-44 rounded-2xl" />
             ))}
           </div>
+        ) : isIelts ? (
+          activeChallenge ? (
+            <div className="card p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="font-mono text-[12px] text-muted">
+                  {activeChallenge.serial}
+                  {activeChallenge.targetBand &&
+                    ` · Target Band ${activeChallenge.targetBand}`}
+                </span>
+                <Link href={`/ielts/${activeChallenge.id}`}>
+                  <Button variant="secondary" size="sm">
+                    Open
+                    <ArrowRight size={14} />
+                  </Button>
+                </Link>
+              </div>
+              <ProgressGrid challengeId={activeChallenge.id} days={activeDays} />
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-line bg-surface/50 px-6 py-12 text-center">
+              <Target size={20} className="mx-auto mb-3 text-muted" />
+              <p className="text-[14px] font-medium text-ink">
+                No active challenge
+              </p>
+              <p className="mt-1 text-[13px] text-muted">
+                Start your 30-day IELTS comeback — no module skipped, no day
+                wasted.
+              </p>
+              <Link href="/ielts" className="mt-4 inline-block">
+                <Button className="ws-accent-bg">
+                  <Plus size={16} />
+                  Start Challenge
+                </Button>
+              </Link>
+            </div>
+          )
         ) : isAcademic ? (
           recentNotes.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-line bg-surface/50 px-6 py-12 text-center">

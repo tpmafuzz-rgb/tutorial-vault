@@ -6,6 +6,9 @@ import type {
   AssetType,
   Category,
   Difficulty,
+  IeltsChallenge,
+  IeltsDay,
+  IeltsStatus,
   Note,
   NoteBlock,
   Profile,
@@ -17,11 +20,15 @@ import { createClient } from "./supabase/client";
 import {
   rowToAsset,
   rowToCategory,
+  rowToIeltsChallenge,
+  rowToIeltsDay,
   rowToNote,
   rowToProfile,
   rowToTutorial,
   type AssetRow,
   type CategoryRow,
+  type IeltsChallengeRow,
+  type IeltsDayRow,
   type NoteRow,
   type ProfileRow,
   type TutorialRow,
@@ -95,6 +102,8 @@ interface VaultState {
   categories: Category[];
   assets: Asset[];
   notes: Note[];
+  ieltsChallenges: IeltsChallenge[];
+  ieltsDays: IeltsDay[];
   profile: Profile;
   theme: "light" | "dim";
   pdfExports: number;
@@ -111,6 +120,18 @@ interface VaultState {
   updateNote: (id: string, patch: NewNoteInput) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
   toggleNoteFavorite: (id: string) => Promise<void>;
+
+  // ---- IELTS challenge ----
+  addIeltsChallenge: (input: {
+    studentName: string;
+    targetBand: string;
+    startDate: string;
+    targetDate: string;
+  }) => Promise<string | null>;
+  setIeltsStatus: (id: string, status: IeltsStatus) => Promise<void>;
+  deleteIeltsChallenge: (id: string) => Promise<void>;
+  /** Upsert one tracked day (created lazily on first save). */
+  saveIeltsDay: (day: IeltsDay) => Promise<boolean>;
 
   addCategory: (name: string, color: string) => Promise<void>;
   renameCategory: (id: string, name: string) => Promise<void>;
@@ -189,6 +210,8 @@ export const useVault = create<VaultState>()((set, get) => ({
   categories: [],
   assets: [],
   notes: [],
+  ieltsChallenges: [],
+  ieltsDays: [],
   profile: emptyProfile,
   theme: "light",
   pdfExports: 0,
@@ -212,6 +235,8 @@ export const useVault = create<VaultState>()((set, get) => ({
       { data: assetRows },
       { data: linkRows },
       { data: noteRows },
+      { data: ieltsRows },
+      { data: ieltsDayRows },
       { data: profileRow },
       { count: exportCount },
     ] = await Promise.all([
@@ -220,6 +245,8 @@ export const useVault = create<VaultState>()((set, get) => ({
       supabase.from("assets").select("*").order("created_at", { ascending: false }),
       supabase.from("tutorial_assets").select("tutorial_id, asset_id"),
       supabase.from("notes").select("*").order("created_at", { ascending: false }),
+      supabase.from("ielts_challenges").select("*").order("created_at", { ascending: false }),
+      supabase.from("ielts_days").select("*").order("day_number"),
       supabase.from("profiles").select("*").eq("id", user.id).single(),
       supabase.from("export_logs").select("*", { count: "exact", head: true }),
     ]);
@@ -237,7 +264,7 @@ export const useVault = create<VaultState>()((set, get) => ({
     let savedWorkspace: Workspace = get().workspace;
     try {
       const w = localStorage.getItem("tv-workspace");
-      if (w === "editing" || w === "academic") savedWorkspace = w;
+      if (w === "editing" || w === "academic" || w === "ielts") savedWorkspace = w;
     } catch {
       /* ignore */
     }
@@ -253,6 +280,8 @@ export const useVault = create<VaultState>()((set, get) => ({
         rowToAsset(r, linksByAsset.get(r.id) ?? [])
       ),
       notes: ((noteRows ?? []) as NoteRow[]).map(rowToNote),
+      ieltsChallenges: ((ieltsRows ?? []) as IeltsChallengeRow[]).map(rowToIeltsChallenge),
+      ieltsDays: ((ieltsDayRows ?? []) as IeltsDayRow[]).map(rowToIeltsDay),
       profile: prof ? rowToProfile(prof) : emptyProfile,
       theme: prof?.theme ?? "light",
       pdfExports: exportCount ?? 0,
@@ -422,6 +451,99 @@ export const useVault = create<VaultState>()((set, get) => ({
         ),
       }));
     }
+  },
+
+  // ---- IELTS challenge ----
+  addIeltsChallenge: async (input) => {
+    const supabase = createClient();
+    const userId = get().userId;
+    if (!userId) return null;
+    const { data, error } = await supabase
+      .from("ielts_challenges")
+      .insert({
+        student_name: input.studentName,
+        target_band: input.targetBand,
+        start_date: input.startDate,
+        target_date: input.targetDate,
+        user_id: userId,
+      })
+      .select("*")
+      .single();
+    if (error || !data) {
+      set({ error: error?.message ?? "Failed to start challenge." });
+      return null;
+    }
+    const challenge = rowToIeltsChallenge(data as IeltsChallengeRow);
+    set((s) => ({ ieltsChallenges: [challenge, ...s.ieltsChallenges] }));
+    return challenge.id;
+  },
+
+  setIeltsStatus: async (id, status) => {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("ielts_challenges")
+      .update({ status })
+      .eq("id", id);
+    if (error) return set({ error: error.message });
+    set((s) => ({
+      ieltsChallenges: s.ieltsChallenges.map((c) =>
+        c.id === id ? { ...c, status } : c
+      ),
+    }));
+  },
+
+  deleteIeltsChallenge: async (id) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("ielts_challenges").delete().eq("id", id);
+    if (error) return set({ error: error.message });
+    set((s) => ({
+      ieltsChallenges: s.ieltsChallenges.filter((c) => c.id !== id),
+      ieltsDays: s.ieltsDays.filter((d) => d.challengeId !== id),
+    }));
+  },
+
+  saveIeltsDay: async (day) => {
+    const supabase = createClient();
+    const userId = get().userId;
+    if (!userId) return false;
+    const { data, error } = await supabase
+      .from("ielts_days")
+      .upsert(
+        {
+          user_id: userId,
+          challenge_id: day.challengeId,
+          day_number: day.dayNumber,
+          date: day.date,
+          listening: day.listening,
+          reading: day.reading,
+          writing: day.writing,
+          speaking: day.speaking,
+          vocabulary: day.vocabulary,
+          reflection: day.reflection,
+          done_listening: day.done.listening,
+          done_reading: day.done.reading,
+          done_writing: day.done.writing,
+          done_speaking: day.done.speaking,
+          done_reflection: day.done.reflection,
+        },
+        { onConflict: "challenge_id,day_number" }
+      )
+      .select("*")
+      .single();
+    if (error || !data) {
+      set({ error: error?.message ?? "Failed to save day." });
+      return false;
+    }
+    const saved = rowToIeltsDay(data as IeltsDayRow);
+    set((s) => {
+      const exists = s.ieltsDays.some((d) => d.id === saved.id);
+      return {
+        ieltsDays: exists
+          ? s.ieltsDays.map((d) => (d.id === saved.id ? saved : d))
+          : [...s.ieltsDays, saved],
+      };
+    });
+    return true;
   },
 
   addCategory: async (name, color) => {

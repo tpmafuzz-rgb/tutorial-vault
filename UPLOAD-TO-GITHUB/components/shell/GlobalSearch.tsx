@@ -21,8 +21,10 @@ export function GlobalSearch({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const { workspace, tutorials, categories, assets, notes } = useVault();
+  const { workspace, tutorials, categories, assets, notes, ieltsChallenges } =
+    useVault();
   const isAcademic = workspace === "academic";
+  const isIelts = workspace === "ielts";
   const [q, setQ] = React.useState("");
   const [active, setActive] = React.useState(0);
 
@@ -30,6 +32,24 @@ export function GlobalSearch({
     categories.find((c) => c.id === id)?.name ?? "Uncategorized";
 
   const results: Hit[] = React.useMemo(() => {
+    if (isIelts) {
+      const query = q.trim().toLowerCase();
+      return ieltsChallenges
+        .filter(
+          (c) =>
+            !query ||
+            c.serial.toLowerCase().includes(query) ||
+            c.studentName.toLowerCase().includes(query) ||
+            c.targetBand.toLowerCase().includes(query)
+        )
+        .slice(0, 7)
+        .map((c) => ({
+          id: c.id,
+          name: c.studentName || "Comeback Challenge",
+          meta: `${c.serial} · ${c.status}${c.targetBand ? " · Band " + c.targetBand : ""}`,
+          href: `/ielts/${c.id}`,
+        }));
+    }
     if (isAcademic) {
       return searchNotes(notes, q)
         .slice(0, 7)
@@ -49,7 +69,7 @@ export function GlobalSearch({
         href: `/tutorials/${t.id}`,
       }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAcademic, tutorials, categories, assets, notes, q]);
+  }, [isIelts, isAcademic, tutorials, categories, assets, notes, ieltsChallenges, q]);
 
   React.useEffect(() => {
     if (open) {
@@ -87,9 +107,11 @@ export function GlobalSearch({
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={
-            isAcademic
-              ? "Search notes by title, subject, content…"
-              : "Search tutorials, categories, assets…"
+            isIelts
+              ? "Search challenges by serial, name, band…"
+              : isAcademic
+                ? "Search notes by title, subject, content…"
+                : "Search tutorials, categories, assets…"
           }
           className="h-14 w-full bg-transparent text-[15px] text-ink outline-none placeholder:text-muted/70"
         />
@@ -100,9 +122,11 @@ export function GlobalSearch({
           <div className="px-3 py-10 text-center text-[13.5px] text-muted">
             {q
               ? "No matches found."
-              : isAcademic
-                ? "Start typing to search your notes."
-                : "Start typing to search your vault."}
+              : isIelts
+                ? "Start typing to search your challenges."
+                : isAcademic
+                  ? "Start typing to search your notes."
+                  : "Start typing to search your vault."}
           </div>
         ) : (
           results.map((r, i) => (

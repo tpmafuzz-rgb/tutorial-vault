@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { BookDocument } from "@/components/pdf/BookDocument";
 import { NoteBookDocument } from "@/components/pdf/NoteBookDocument";
+import { IeltsBookDocument } from "@/components/pdf/IeltsBookDocument";
+import { dayHasData } from "@/lib/ielts";
 
 // react-pdf is browser-only — load with no SSR. Cast to `any`: next/dynamic
 // erases the render-prop child type that PDFDownloadLink relies on.
@@ -27,9 +29,18 @@ type Scope = "all" | "favorites" | "category" | "subject";
 
 export default function ExportPage() {
   const hydrated = useHydrated();
-  const { workspace, tutorials, categories, notes, profile, logExport } =
-    useVault();
+  const {
+    workspace,
+    tutorials,
+    categories,
+    notes,
+    ieltsChallenges,
+    ieltsDays,
+    profile,
+    logExport,
+  } = useVault();
   const isAcademic = workspace === "academic";
+  const isIelts = workspace === "ielts";
 
   const [scope, setScope] = React.useState<Scope>("all");
   const [categoryId, setCategoryId] = React.useState<string>(
@@ -45,9 +56,34 @@ export default function ExportPage() {
 
   // sensible default title per workspace
   React.useEffect(() => {
-    setTitle(isAcademic ? "My Study Notebook" : profile.bookTitle);
+    setTitle(
+      isIelts
+        ? "IELTS Comeback Challenge"
+        : isAcademic
+          ? "My Study Notebook"
+          : profile.bookTitle
+    );
     setScope("all");
-  }, [isAcademic, profile.bookTitle]);
+  }, [isAcademic, isIelts, profile.bookTitle]);
+
+  // IELTS: which challenge to export
+  const [ieltsId, setIeltsId] = React.useState("");
+  React.useEffect(() => {
+    if (isIelts && !ieltsId && ieltsChallenges.length) {
+      const active = ieltsChallenges.find((c) => c.status === "active");
+      setIeltsId((active ?? ieltsChallenges[0]).id);
+    }
+  }, [isIelts, ieltsId, ieltsChallenges]);
+  const ieltsChallenge = ieltsChallenges.find((c) => c.id === ieltsId) ?? null;
+  const ieltsTrackedDays = React.useMemo(
+    () =>
+      ieltsChallenge
+        ? ieltsDays.filter(
+            (d) => d.challengeId === ieltsChallenge.id && dayHasData(d)
+          )
+        : [],
+    [ieltsChallenge, ieltsDays]
+  );
 
   const subjects = React.useMemo(() => {
     const set = new Set<string>();
@@ -71,35 +107,55 @@ export default function ExportPage() {
     return list;
   }, [notes, scope, subject]);
 
-  const count = isAcademic ? selectedNotes.length : selectedTutorials.length;
+  const count = isIelts
+    ? ieltsChallenge
+      ? ieltsTrackedDays.length
+      : 0
+    : isAcademic
+      ? selectedNotes.length
+      : selectedTutorials.length;
   const dateLabel = formatDate(new Date().toISOString());
-  const fallback = isAcademic ? "study-notebook" : "editing-book";
+  const fallback = isIelts
+    ? "ielts-challenge"
+    : isAcademic
+      ? "study-notebook"
+      : "editing-book";
   const fileName = `${title.replace(/[^\w\s-]/g, "").trim() || fallback}.pdf`;
 
-  const doc = isAcademic ? (
-    <NoteBookDocument
-      notes={selectedNotes}
-      bookTitle={title || "My Study Notebook"}
-      authorName={author || "Author"}
-      dateLabel={dateLabel}
-    />
-  ) : (
-    <BookDocument
-      tutorials={selectedTutorials}
-      bookTitle={title || "My Editing Encyclopedia"}
-      authorName={author || "Creator"}
-      dateLabel={dateLabel}
-    />
-  );
+  const doc =
+    isIelts && ieltsChallenge ? (
+      <IeltsBookDocument
+        challenge={ieltsChallenge}
+        days={ieltsTrackedDays}
+        authorName={author || "Student"}
+        dateLabel={dateLabel}
+      />
+    ) : isAcademic ? (
+      <NoteBookDocument
+        notes={selectedNotes}
+        bookTitle={title || "My Study Notebook"}
+        authorName={author || "Author"}
+        dateLabel={dateLabel}
+      />
+    ) : (
+      <BookDocument
+        tutorials={selectedTutorials}
+        bookTitle={title || "My Editing Encyclopedia"}
+        authorName={author || "Creator"}
+        dateLabel={dateLabel}
+      />
+    );
 
   return (
     <div className="animate-fade-in">
       <PageHeader
         title="Book Export"
         subtitle={
-          isAcademic
-            ? "Turn your notes into a study handbook PDF."
-            : "Turn your vault into a published-feeling PDF handbook."
+          isIelts
+            ? "Download your 30-day challenge as a filled-in tracker PDF."
+            : isAcademic
+              ? "Turn your notes into a study handbook PDF."
+              : "Turn your vault into a published-feeling PDF handbook."
         }
       />
 
@@ -109,6 +165,24 @@ export default function ExportPage() {
           <div className="card p-5">
             <h2 className="mb-4 text-[14px] font-semibold text-ink">Configure</h2>
             <div className="space-y-4">
+              {isIelts ? (
+                <Field label="Challenge">
+                  <Select
+                    value={ieltsId}
+                    onChange={(e) => setIeltsId(e.target.value)}
+                  >
+                    {ieltsChallenges.length === 0 && (
+                      <option value="">No challenges yet</option>
+                    )}
+                    {ieltsChallenges.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.serial}
+                        {c.studentName ? ` — ${c.studentName}` : ""} ({c.status})
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              ) : (
               <Field label="What to include">
                 <Select value={scope} onChange={(e) => setScope(e.target.value as Scope)}>
                   <option value="all">
@@ -122,6 +196,7 @@ export default function ExportPage() {
                   )}
                 </Select>
               </Field>
+              )}
 
               {!isAcademic && scope === "category" && (
                 <Field label="Category">
@@ -165,7 +240,8 @@ export default function ExportPage() {
             <div className="mt-5 flex items-center justify-between rounded-xl bg-surface px-3.5 py-2.5">
               <span className="inline-flex items-center gap-2 text-[13px] text-muted">
                 <FileText size={15} />
-                {count} {isAcademic ? "note" : "tutorial"}
+                {count}{" "}
+                {isIelts ? "tracked day" : isAcademic ? "note" : "tutorial"}
                 {count === 1 ? "" : "s"}
               </span>
             </div>
@@ -201,9 +277,11 @@ export default function ExportPage() {
               <BookOpen size={15} />
             </span>
             <p className="text-[12.5px] leading-relaxed text-muted">
-              {isAcademic
-                ? "Includes a cover, auto table of contents, one chapter per note with its sections, page numbers, and a footer."
-                : "Includes a cover, auto table of contents, one chapter per tutorial, page numbers, and a footer."}
+              {isIelts
+                ? "Includes a cover, the filled 30-day progress grid, and one chapter per tracked day — all six parts plus the Success Rule."
+                : isAcademic
+                  ? "Includes a cover, auto table of contents, one chapter per note with its sections, page numbers, and a footer."
+                  : "Includes a cover, auto table of contents, one chapter per tutorial, page numbers, and a footer."}
             </p>
           </div>
         </div>

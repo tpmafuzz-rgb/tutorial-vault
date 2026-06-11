@@ -16,6 +16,7 @@ export function Topbar({
 }) {
   const workspace = useVault((s) => s.workspace);
   const isAcademic = workspace === "academic";
+  const isIelts = workspace === "ielts";
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-canvas/80 px-4 backdrop-blur-xl lg:px-6">
@@ -34,7 +35,11 @@ export function Topbar({
       >
         <Search size={16} className="shrink-0" />
         <span className="truncate text-[13.5px]">
-          {isAcademic ? "Search your notes…" : "Search your vault…"}
+          {isIelts
+            ? "Search your challenges…"
+            : isAcademic
+              ? "Search your notes…"
+              : "Search your vault…"}
         </span>
         <kbd className="ml-auto hidden items-center gap-0.5 rounded-md border border-line bg-canvas px-1.5 py-0.5 text-[11px] text-muted sm:flex">
           <Command size={11} /> K
@@ -47,11 +52,16 @@ export function Topbar({
       </div>
 
       <div className="flex shrink-0 items-center gap-2" data-tour="new-button">
-        <Link href={isAcademic ? "/notes/new" : "/tutorials/new"}>
-          <Button size="md" className={isAcademic ? "ws-accent-bg" : undefined}>
+        <Link
+          href={isIelts ? "/ielts" : isAcademic ? "/notes/new" : "/tutorials/new"}
+        >
+          <Button
+            size="md"
+            className={isAcademic || isIelts ? "ws-accent-bg" : undefined}
+          >
             <Plus size={16} strokeWidth={2.4} />
             <span className="hidden sm:inline">
-              {isAcademic ? "New Note" : "New Tutorial"}
+              {isIelts ? "New Challenge" : isAcademic ? "New Note" : "New Tutorial"}
             </span>
           </Button>
         </Link>

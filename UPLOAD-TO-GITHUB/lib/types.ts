@@ -71,7 +71,7 @@ export interface Profile {
 }
 
 /** Which side of the app is active. */
-export type Workspace = "editing" | "academic";
+export type Workspace = "editing" | "academic" | "ielts";
 
 /**
  * One labeled section of an academic note. The user writes freely, then tags
@@ -99,5 +99,102 @@ export interface Note {
   blocks: NoteBlock[];
   favorite: boolean;
   createdAt: string;
+  updatedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// IELTS 30-Day Comeback Challenge
+// ---------------------------------------------------------------------------
+
+export type IeltsStatus = "active" | "completed" | "archived";
+
+/** One 30-day challenge attempt. Users can run several over time. */
+export interface IeltsChallenge {
+  id: string;
+  /** auto-generated: IELTS-0001 */
+  serial: string;
+  studentName: string;
+  targetBand: string;
+  /** ISO date (yyyy-mm-dd) or "" */
+  startDate: string;
+  targetDate: string;
+  status: IeltsStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IeltsListening {
+  source: string;
+  /** raw score out of 40, kept as text ("31") */
+  score: string;
+  wrong: string;
+  errorTypes: string[];
+  wrongQuestions: string;
+  lesson: string;
+}
+
+export interface IeltsReading {
+  source: string;
+  score: string;
+  wrong: string;
+  missedTypes: string[];
+  lesson: string;
+}
+
+export interface IeltsWriting {
+  /** task type is derived from the day number (odd → Task 1, even → Task 2) */
+  estBand: string;
+  vocabUsed: string;
+  analyse: string[];
+  lesson: string;
+}
+
+export interface IeltsSpeaking {
+  source: string;
+  topic1: string;
+  topic2: string;
+  identified: string[];
+  lesson: string;
+}
+
+export interface IeltsVocabWord {
+  word: string;
+  meaning: string;
+  example: string;
+}
+
+export interface IeltsReflection {
+  bestModule: string;
+  weakestModule: string;
+  commonMistake: string;
+  learned: string;
+  improve: string;
+}
+
+/** The 5-checkbox Success Rule — a day counts only when all five are true. */
+export interface IeltsDayDone {
+  listening: boolean;
+  reading: boolean;
+  writing: boolean;
+  speaking: boolean;
+  reflection: boolean;
+}
+
+/** One tracked day of a challenge (created lazily on first save). */
+export interface IeltsDay {
+  id: string;
+  challengeId: string;
+  /** 1..30 */
+  dayNumber: number;
+  /** ISO date or "" */
+  date: string;
+  listening: IeltsListening;
+  reading: IeltsReading;
+  writing: IeltsWriting;
+  speaking: IeltsSpeaking;
+  /** exactly 5 slots in the UI; stored as-is */
+  vocabulary: IeltsVocabWord[];
+  reflection: IeltsReflection;
+  done: IeltsDayDone;
   updatedAt: string;
 }

@@ -8,12 +8,16 @@ import type {
   AssetType,
   Category,
   Difficulty,
+  IeltsChallenge,
+  IeltsDay,
+  IeltsStatus,
   Note,
   NoteBlock,
   Profile,
   Tutorial,
   WorkflowStep,
 } from "@/lib/types";
+import { emptyIeltsDay } from "@/lib/ielts";
 
 export interface TutorialRow {
   id: string;
@@ -161,6 +165,83 @@ export function rowToNote(r: NoteRow): Note {
     blocks: (r.blocks ?? []) as NoteBlock[],
     favorite: r.favorite,
     createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+// ---- IELTS ----
+
+export interface IeltsChallengeRow {
+  id: string;
+  user_id: string;
+  serial: string;
+  student_name: string;
+  target_band: string;
+  start_date: string;
+  target_date: string;
+  status: IeltsStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IeltsDayRow {
+  id: string;
+  user_id: string;
+  challenge_id: string;
+  day_number: number;
+  date: string;
+  listening: Record<string, unknown>;
+  reading: Record<string, unknown>;
+  writing: Record<string, unknown>;
+  speaking: Record<string, unknown>;
+  vocabulary: unknown[];
+  reflection: Record<string, unknown>;
+  done_listening: boolean;
+  done_reading: boolean;
+  done_writing: boolean;
+  done_speaking: boolean;
+  done_reflection: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export function rowToIeltsChallenge(r: IeltsChallengeRow): IeltsChallenge {
+  return {
+    id: r.id,
+    serial: r.serial,
+    studentName: r.student_name ?? "",
+    targetBand: r.target_band ?? "",
+    startDate: r.start_date ?? "",
+    targetDate: r.target_date ?? "",
+    status: r.status ?? "active",
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+export function rowToIeltsDay(r: IeltsDayRow): IeltsDay {
+  // merge stored jsonb over a blank day so missing keys get safe defaults
+  const blank = emptyIeltsDay(r.challenge_id, r.day_number);
+  return {
+    ...blank,
+    id: r.id,
+    date: r.date ?? "",
+    listening: { ...blank.listening, ...(r.listening as object) },
+    reading: { ...blank.reading, ...(r.reading as object) },
+    writing: { ...blank.writing, ...(r.writing as object) },
+    speaking: { ...blank.speaking, ...(r.speaking as object) },
+    vocabulary:
+      Array.isArray(r.vocabulary) && r.vocabulary.length
+        ? (r.vocabulary as IeltsDay["vocabulary"])
+        : blank.vocabulary,
+    reflection: { ...blank.reflection, ...(r.reflection as object) },
+    done: {
+      listening: r.done_listening,
+      reading: r.done_reading,
+      writing: r.done_writing,
+      speaking: r.done_speaking,
+      reflection: r.done_reflection,
+    },
     updatedAt: r.updated_at,
   };
 }

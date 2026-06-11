@@ -14,6 +14,7 @@ import {
   NotebookPen,
   PanelLeftClose,
   PanelLeftOpen,
+  Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useVault } from "@/lib/store";
@@ -37,6 +38,13 @@ const ACADEMIC_NAV = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+const IELTS_NAV = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/ielts", label: "Challenges", icon: Target },
+  { href: "/export", label: "Book Export", icon: BookOpen },
+  { href: "/settings", label: "Settings", icon: Settings },
+];
+
 export function Sidebar({
   collapsed,
   onToggle,
@@ -46,7 +54,12 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const workspace = useVault((s) => s.workspace);
-  const nav = workspace === "academic" ? ACADEMIC_NAV : EDITING_NAV;
+  const nav =
+    workspace === "academic"
+      ? ACADEMIC_NAV
+      : workspace === "ielts"
+        ? IELTS_NAV
+        : EDITING_NAV;
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
@@ -73,7 +86,11 @@ export function Sidebar({
               TUTORIAL
             </span>
             <span className="mt-0.5 text-[11px] text-muted">
-              {workspace === "academic" ? "Study Notebook" : "Knowledge Vault"}
+              {workspace === "academic"
+                ? "Study Notebook"
+                : workspace === "ielts"
+                  ? "IELTS Tracker"
+                  : "Knowledge Vault"}
             </span>
           </div>
         )}

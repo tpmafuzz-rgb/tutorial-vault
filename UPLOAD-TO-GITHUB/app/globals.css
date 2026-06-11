@@ -94,6 +94,28 @@
   background: var(--accent-academic-soft) !important;
 }
 
+/* ---- IELTS workspace: exam-crimson accent ---- */
+[data-workspace="ielts"] {
+  --accent-ielts: #be123c;
+  --accent-ielts-soft: #fff1f2;
+}
+[data-workspace="ielts"] .ws-mark {
+  background: var(--accent-ielts) !important;
+}
+[data-workspace="ielts"] .ws-accent-text {
+  color: var(--accent-ielts) !important;
+}
+[data-workspace="ielts"] .ws-accent-bg {
+  background: var(--accent-ielts) !important;
+  color: #ffffff !important;
+}
+[data-workspace="ielts"] .ws-accent-rail {
+  background: var(--accent-ielts) !important;
+}
+[data-workspace="ielts"] .ws-tint {
+  background: var(--accent-ielts-soft) !important;
+}
+
 .skeleton {
   position: relative;
   overflow: hidden;
